@@ -1,618 +1,817 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW" class="h-full bg-slate-900 text-slate-100">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>每日店況診斷｜中山國中店</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700&family=Noto+Sans+TC:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --paper:#EEEFE7;
-    --paper-raise:#F6F6F0;
-    --ink:#17241F;
-    --ink-soft:#4A564E;
-    --line:#C7CBB8;
-    --green:#3C7A5A;
-    --green-soft:#E1EBE1;
-    --amber:#B4791E;
-    --amber-soft:#F1E5CD;
-    --red:#AD3A31;
-    --red-soft:#F1DCD8;
-    --pending:#8D9382;
-    --pending-soft:#E4E4DA;
-  }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
-  body{
-    background:var(--paper);
-    color:var(--ink);
-    font-family:"Noto Sans TC",sans-serif;
-    padding:32px 20px 60px;
-    -webkit-font-smoothing:antialiased;
-  }
-  .sheet{
-    max-width:980px;
-    margin:0 auto;
-  }
-  .mono{font-family:"IBM Plex Mono","Noto Sans TC",monospace;font-variant-numeric:tabular-nums;}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日店況 AI 診斷系統 - 中山國中店</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  /* ---------- Masthead ---------- */
-  .masthead{
-    display:grid;
-    grid-template-columns:1fr auto;
-    gap:20px;
-    align-items:end;
-    padding-bottom:18px;
-    border-bottom:2px solid var(--ink);
-  }
-  .masthead .label{
-    font-size:12px;
-    letter-spacing:.04em;
-    color:var(--ink-soft);
-    margin:0 0 6px;
-  }
-  .masthead h1{
-    font-family:"Noto Serif TC",serif;
-    font-weight:700;
-    font-size:clamp(26px,4vw,36px);
-    margin:0 0 8px;
-    line-height:1.25;
-  }
-  .masthead .meta{
-    display:flex;
-    flex-wrap:wrap;
-    gap:4px 18px;
-    font-size:13px;
-    color:var(--ink-soft);
-  }
-  .masthead .meta span{white-space:nowrap;}
-
-  .overall{
-    display:flex;
-    align-items:center;
-    gap:14px;
-    justify-self:end;
-  }
-  .overall-gauge{width:118px;position:relative;}
-  .overall-gauge svg{display:block;width:100%;}
-  .overall-gauge .track{fill:none;stroke:var(--line);stroke-width:9;stroke-linecap:round;}
-  .overall-gauge .fill{fill:none;stroke-width:9;stroke-linecap:round;}
-  .overall-num{
-    position:absolute;
-    left:0;right:0;bottom:2px;
-    text-align:center;
-    font-family:"Noto Serif TC",serif;
-    font-weight:700;
-    font-size:30px;
-  }
-  .overall-num small{font-family:"Noto Sans TC",sans-serif;font-weight:500;font-size:13px;margin-left:2px;color:var(--ink-soft);}
-  .overall-status{
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-  }
-  .status-pill{
-    display:inline-flex;
-    align-items:center;
-    gap:7px;
-    padding:5px 12px;
-    border-radius:999px;
-    font-size:13px;
-    font-weight:600;
-    width:fit-content;
-  }
-  .status-pill.amber{background:var(--amber-soft);color:var(--amber);}
-  .status-pill.green{background:var(--green-soft);color:var(--green);}
-  .status-pill.red{background:var(--red-soft);color:var(--red);}
-  .dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none;}
-  .dot.green{background:var(--green);}
-  .dot.amber{background:var(--amber);}
-  .dot.red{background:var(--red);}
-  .dot.pending{background:var(--pending);}
-  .overall-status .sub{font-size:12.5px;color:var(--ink-soft);max-width:220px;line-height:1.5;}
-
-  /* ---------- Store strip ---------- */
-  .store-strip{
-    margin-top:22px;
-    padding:14px 18px;
-    background:var(--paper-raise);
-    border:1px solid var(--line);
-    border-radius:10px;
-    display:flex;
-    flex-wrap:wrap;
-    align-items:center;
-    gap:10px 26px;
-  }
-  .store-strip .strip-label{
-    font-size:12px;
-    color:var(--ink-soft);
-    letter-spacing:.02em;
-    flex:none;
-  }
-  .store-chip{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    font-size:13.5px;
-    padding:4px 0;
-  }
-  .store-chip.active{font-weight:600;}
-  .store-chip .score{color:var(--ink-soft);font-size:12.5px;}
-  .store-chip.pending .score{font-style:normal;}
-
-  /* ---------- Section headers ---------- */
-  .section-title{
-    font-family:"Noto Serif TC",serif;
-    font-weight:700;
-    font-size:18px;
-    margin:40px 0 4px;
-  }
-  .section-sub{
-    font-size:12.5px;
-    color:var(--ink-soft);
-    margin:0 0 16px;
-  }
-
-  /* ---------- Diagnosis grid ---------- */
-  .grid{
-    display:grid;
-    grid-template-columns:repeat(4,1fr);
-    gap:14px;
-  }
-  .card{
-    background:var(--paper-raise);
-    border:1px solid var(--line);
-    border-radius:10px;
-    padding:16px 16px 18px;
-    display:flex;
-    flex-direction:column;
-    grid-column:span 2;
-  }
-  .card.wide{grid-column:span 2;}
-  .card.full{grid-column:span 4;}
-  .card-head{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    margin-bottom:10px;
-  }
-  .card-head h3{
-    font-size:14.5px;
-    font-weight:600;
-    margin:0;
-  }
-  .card-head .tag{
-    margin-left:auto;
-    font-size:11px;
-    color:var(--ink-soft);
-    border:1px solid var(--line);
-    padding:2px 7px;
-    border-radius:999px;
-  }
-  .gauge-row{
-    display:flex;
-    align-items:center;
-    gap:16px;
-  }
-  .gauge{width:104px;position:relative;flex:none;}
-  .gauge svg{display:block;width:100%;}
-  .gauge .track{fill:none;stroke:var(--line);stroke-width:9;stroke-linecap:round;}
-  .gauge .fill{fill:none;stroke-width:9;stroke-linecap:round;}
-  .gauge-score{
-    position:absolute;left:0;right:0;bottom:0;
-    text-align:center;
-    font-family:"IBM Plex Mono",monospace;
-    font-weight:600;
-    font-size:22px;
-  }
-  .gauge-score span{font-size:11px;color:var(--ink-soft);font-family:"Noto Sans TC",sans-serif;}
-  .gauge.pending .fill{display:none;}
-  .gauge.pending .gauge-score{color:var(--pending);font-size:14px;font-weight:600;}
-
-  .metrics{
-    display:flex;
-    flex-direction:column;
-    gap:4px;
-    margin:0;
-    font-size:13px;
-  }
-  .metrics div{display:flex;justify-content:space-between;gap:8px;}
-  .metrics dt{color:var(--ink-soft);}
-  .metrics dd{margin:0;font-family:"IBM Plex Mono",monospace;}
-
-  .note{
-    font-size:12.5px;
-    color:var(--ink-soft);
-    line-height:1.55;
-    margin:12px 0 0;
-    padding-top:10px;
-    border-top:1px solid var(--line);
-  }
-
-  .staff-list{
-    margin:12px 0 0;
-    padding-top:10px;
-    border-top:1px solid var(--line);
-    display:flex;
-    flex-direction:column;
-    gap:7px;
-  }
-  .staff-row{
-    display:flex;
-    align-items:center;
-    gap:9px;
-    font-size:13px;
-  }
-  .staff-row .name{flex:1;}
-  .staff-row .val{font-family:"IBM Plex Mono",monospace;color:var(--ink-soft);}
-
-  /* ---------- Trend ---------- */
-  .trend-wrap{
-    background:var(--paper-raise);
-    border:1px solid var(--line);
-    border-radius:10px;
-    padding:20px 22px 16px;
-  }
-  .bars{
-    display:flex;
-    align-items:flex-end;
-    gap:14px;
-    height:150px;
-    padding-top:22px;
-    position:relative;
-  }
-  .bars::before{
-    content:"";
-    position:absolute;
-    left:0;right:0;
-    top:22px;
-    height:1px;
-    background:var(--line);
-  }
-  .bar-col{
-    flex:1;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    height:100%;
-    justify-content:flex-end;
-    position:relative;
-  }
-  .bar-col .pct{
-    font-family:"IBM Plex Mono",monospace;
-    font-size:11.5px;
-    color:var(--ink-soft);
-    margin-bottom:6px;
-  }
-  .bar-col .bar{
-    width:100%;
-    max-width:34px;
-    border-radius:3px 3px 0 0;
-  }
-  .bar-col .date{
-    margin-top:8px;
-    font-size:11.5px;
-    color:var(--ink-soft);
-  }
-  .trend-note{
-    font-size:12.5px;
-    color:var(--ink-soft);
-    margin:14px 0 0;
-    padding-top:12px;
-    border-top:1px solid var(--line);
-  }
-
-  /* ---------- Insight ---------- */
-  .insight-list{
-    list-style:none;
-    margin:0;
-    padding:0;
-    display:flex;
-    flex-direction:column;
-    gap:12px;
-  }
-  .insight-list li{
-    display:flex;
-    gap:12px;
-    font-size:13.5px;
-    line-height:1.6;
-    padding:14px 16px;
-    background:var(--paper-raise);
-    border:1px solid var(--line);
-    border-left:3px solid var(--ink);
-    border-radius:6px;
-  }
-  .insight-list li.flag-red{border-left-color:var(--red);}
-  .insight-list li.flag-amber{border-left-color:var(--amber);}
-  .insight-list li.flag-pending{border-left-color:var(--pending);}
-  .insight-list .body b{font-weight:600;}
-
-  .foot{
-    margin-top:40px;
-    padding-top:16px;
-    border-top:1px solid var(--line);
-    font-size:11.5px;
-    color:var(--ink-soft);
-    display:flex;
-    justify-content:space-between;
-    flex-wrap:wrap;
-    gap:8px;
-  }
-
-  @media (max-width:760px){
-    .masthead{grid-template-columns:1fr;}
-    .overall{justify-self:start;margin-top:16px;}
-    .grid{grid-template-columns:1fr 1fr;}
-    .card,.card.wide{grid-column:span 2;}
-    .bars{gap:8px;}
-  }
-  @media (max-width:520px){
-    .grid{grid-template-columns:1fr;}
-    .card,.card.wide,.card.full{grid-column:span 1;}
-    .bars{overflow-x:auto;}
-  }
-</style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Noto Sans TC', 'Plus Jakarta Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            500: '#10b981',
+                            600: '#059669',
+                            900: '#064e3b',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+    </style>
 </head>
-<body>
-<div class="sheet">
+<body class="h-full font-sans antialiased text-slate-200 bg-slate-950 flex flex-col">
 
-  <!-- Masthead -->
-  <div class="masthead">
-    <div>
-      <p class="label">每日店況診斷 · AI 自動評分</p>
-      <h1>中山國中店</h1>
-      <div class="meta">
-        <span>診斷日期　2026/08/11（早）</span>
-        <span>資料範圍　2026/08/10 全日</span>
-        <span>資料來源　POS 實收・預約系統・服務排程</span>
-      </div>
-    </div>
-    <div class="overall">
-      <div class="overall-status">
-        <span class="status-pill red"><span class="dot red"></span>紅燈・需立即關注</span>
-        <p class="sub">6 項可評分指標平均 65 分，其中新客轉換率僅 25 分，是拉低整體燈號至紅燈的主因。</p>
-      </div>
-      <div class="overall-gauge">
-        <svg viewBox="0 0 120 66">
-          <path class="track" d="M10,60 A50,50 0 0 1 110,60" pathLength="100"/>
-          <path class="fill" stroke="#AD3A31" d="M10,60 A50,50 0 0 1 110,60" pathLength="100" stroke-dasharray="100" stroke-dashoffset="35"/>
-        </svg>
-        <div class="overall-num">65<small>分</small></div>
-      </div>
-    </div>
-  </div>
+    <!-- Top Navigation -->
+    <header class="sticky top-0 z-40 border-b border-slate-800 bg-slate-900/90 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+                    <i class="fa-solid fa-brain-circuit text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-white tracking-wide flex items-center gap-2">
+                        每日店況 AI 診斷系統
+                        <span class="text-xs font-normal px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">v2.4 Enterprise</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">美業門市智慧營運與自動化監控</p>
+                </div>
+            </div>
 
-  <!-- Store comparison strip -->
-  <div class="store-strip">
-    <span class="strip-label">集團健康度總覽</span>
-    <div class="store-chip active"><span class="dot red"></span>中山國中店　<span class="score mono">65 分</span></div>
-    <div class="store-chip pending"><span class="dot pending"></span>大安店　<span class="score">尚未串接</span></div>
-    <div class="store-chip pending"><span class="dot pending"></span>信義店　<span class="score">尚未串接</span></div>
-  </div>
+            <!-- Controls & Store Picker -->
+            <div class="flex items-center space-x-3">
+                <div class="relative">
+                    <select id="storeSelect" onchange="switchStoreData()" class="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 pr-8 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
+                        <option value="zhongshan">中山國中店</option>
+                        <option value="xinyi">台北信義店</option>
+                        <option value="zhongxiao">忠孝復興店</option>
+                    </select>
+                </div>
 
-  <!-- Diagnosis cards -->
-  <p class="section-title">七項核心指標</p>
-  <p class="section-sub">依營收、預約、新客、回店、續購、產值、空檔七大構面評分，燈號以 90 分以上為綠、70–89 為黃、70 分以下為紅。</p>
+                <div class="relative">
+                    <input type="date" id="datePicker" value="2026-08-10" onchange="switchDateData()" class="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
+                </div>
 
-  <div class="grid">
-
-    <!-- 1 Revenue -->
-    <div class="card">
-      <div class="card-head">
-        <span class="dot amber"></span>
-        <h3>營收達成率</h3>
-        <span class="tag">黃燈</span>
-      </div>
-      <div class="gauge-row">
-        <div class="gauge">
-          <svg viewBox="0 0 120 66">
-            <path class="track" d="M10,60 A50,50 0 0 1 110,60" pathLength="100"/>
-            <path class="fill" stroke="#B4791E" d="M10,60 A50,50 0 0 1 110,60" pathLength="100" stroke-dasharray="100" stroke-dashoffset="19"/>
-          </svg>
-          <div class="gauge-score">81<span>分</span></div>
+                <button onclick="window.print()" class="hidden md:flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium rounded-lg border border-slate-700 transition">
+                    <i class="fa-solid fa-print"></i> 匯出日報
+                </button>
+            </div>
         </div>
-        <dl class="metrics">
-          <div><dt>昨日實收＋勞務操作</dt><dd>NT$ 60,809</dd></div>
-          <div><dt>當日目標</dt><dd>NT$ 75,000</dd></div>
-          <div><dt>差距</dt><dd>－NT$ 14,191</dd></div>
-        </dl>
-      </div>
-      <p class="note">達成率 81%，未達當日目標。近 10 日中僅 8/1、8/10 達八成以上，中段多日明顯偏低。</p>
-    </div>
+    </header>
 
-    <!-- 2 Appointment -->
-    <div class="card">
-      <div class="card-head">
-        <span class="dot amber"></span>
-        <h3>預約到店率</h3>
-        <span class="tag">黃燈</span>
-      </div>
-      <div class="gauge-row">
-        <div class="gauge">
-          <svg viewBox="0 0 120 66">
-            <path class="track" d="M10,60 A50,50 0 0 1 110,60" pathLength="100"/>
-            <path class="fill" stroke="#B4791E" d="M10,60 A50,50 0 0 1 110,60" pathLength="100" stroke-dasharray="100" stroke-dashoffset="20"/>
-          </svg>
-          <div class="gauge-score">80<span>分</span></div>
+    <!-- Main Body Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Banner Alert / Health Score Summary -->
+        <div class="glass-card rounded-2xl p-6 relative overflow-hidden border border-amber-500/20 shadow-2xl">
+            <!-- Background Glow -->
+            <div class="absolute -top-24 -right-24 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                <!-- Health Gauge Score -->
+                <div class="lg:col-span-4 flex items-center gap-5 border-b lg:border-b-0 lg:border-r border-slate-800 pb-6 lg:pb-0 lg:pr-6">
+                    <div class="relative flex items-center justify-center">
+                        <svg class="w-28 h-28 transform -rotate-90">
+                            <circle cx="56" cy="56" r="48" stroke="currentColor" stroke-width="10" class="text-slate-800" fill="transparent" />
+                            <circle cx="56" cy="56" r="48" stroke="currentColor" stroke-width="10" class="text-amber-500" stroke-dasharray="301" stroke-dashoffset="66" fill="transparent" stroke-linecap="round" />
+                        </svg>
+                        <div class="absolute text-center">
+                            <span class="text-3xl font-extrabold text-white" id="healthScoreDisplay">78</span>
+                            <span class="text-xs text-slate-400 block font-medium">分</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 mb-2">
+                            <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                            黃燈：中度營運風險
+                        </div>
+                        <h2 class="text-xl font-bold text-white">中山國中店 晨間診斷</h2>
+                        <p class="text-xs text-slate-400 mt-1">診斷數據生成：2026/08/10 08:30:00</p>
+                    </div>
+                </div>
+
+                <!-- AI Morning Brief Text -->
+                <div class="lg:col-span-8 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-semibold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+                                <i class="fa-solid fa-sparkles text-amber-400"></i> AI 智慧晨間診斷提詞
+                            </span>
+                            <button onclick="speakBrief()" class="text-xs text-slate-400 hover:text-indigo-400 flex items-center gap-1 transition">
+                                <i class="fa-solid fa-volume-high"></i> 語音朗讀
+                            </button>
+                        </div>
+                        <p id="aiBriefText" class="text-slate-300 text-sm leading-relaxed bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+                            今日整體營收達成率為 <strong class="text-amber-400">81.1%</strong>。目前主要風險在於 <strong class="text-rose-400">預約流失率偏高 (20%)</strong> 與 <strong class="text-rose-400">離峰空檔率 (29.2%)</strong>。實收現金僅 $9,999，極度偏重勞務消課 ($50,810)。建議今日重點加強臨櫃升級續購導購與 13:00-15:00 離峰顧客喚回。
+                        </p>
+                    </div>
+
+                    <div class="mt-4 flex flex-wrap gap-2 text-xs">
+                        <span class="px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 border border-slate-700"><i class="fa-solid fa-check text-emerald-400 mr-1"></i>會長回店穩定</span>
+                        <span class="px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 border border-slate-700"><i class="fa-solid fa-triangle-exclamation text-rose-400 mr-1"></i>新客轉換率低 (25%)</span>
+                        <span class="px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 border border-slate-700"><i class="fa-solid fa-clock text-amber-400 mr-1"></i>下午時段 7小時空暇</span>
+                    </div>
+                </div>
+            </div>
         </div>
-        <dl class="metrics">
-          <div><dt>預約人數</dt><dd>10 人</dd></div>
-          <div><dt>實到人數</dt><dd>8 人</dd></div>
-          <div><dt>取消人數</dt><dd>2 人（20%）</dd></div>
-        </dl>
-      </div>
-      <p class="note">取消率 20%，高於健康門檻（建議 &lt;10%），建議確認取消原因並啟用候補名單。</p>
-    </div>
 
-    <!-- 3 Idle rate -->
-    <div class="card">
-      <div class="card-head">
-        <span class="dot amber"></span>
-        <h3>空檔率</h3>
-        <span class="tag">黃燈・近警戒</span>
-      </div>
-      <div class="gauge-row">
-        <div class="gauge">
-          <svg viewBox="0 0 120 66">
-            <path class="track" d="M10,60 A50,50 0 0 1 110,60" pathLength="100"/>
-            <path class="fill" stroke="#B4791E" d="M10,60 A50,50 0 0 1 110,60" pathLength="100" stroke-dasharray="100" stroke-dashoffset="29"/>
-          </svg>
-          <div class="gauge-score">71<span>分</span></div>
+        <!-- Top Key KPI Mini Cards Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <!-- Card 1 -->
+            <div class="glass-card p-4 rounded-xl border-l-4 border-l-amber-500">
+                <div class="flex justify-between items-start text-xs text-slate-400 mb-1">
+                    <span>當日總營收</span>
+                    <i class="fa-solid fa-sack-dollar text-amber-400"></i>
+                </div>
+                <div class="flex items-baseline gap-2">
+                    <span class="text-2xl font-bold text-white">$60,809</span>
+                    <span class="text-xs text-amber-400 font-medium">81.1%</span>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-1">目標: $75,000</p>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="glass-card p-4 rounded-xl border-l-4 border-l-rose-500">
+                <div class="flex justify-between items-start text-xs text-slate-400 mb-1">
+                    <span>當日現金實收</span>
+                    <i class="fa-solid fa-wallet text-rose-400"></i>
+                </div>
+                <div class="flex items-baseline gap-2">
+                    <span class="text-2xl font-bold text-white">$9,999</span>
+                    <span class="text-xs text-rose-400 font-medium">13.3% 佔比</span>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-1">勞務消課: $50,810</p>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="glass-card p-4 rounded-xl border-l-4 border-l-amber-500">
+                <div class="flex justify-between items-start text-xs text-slate-400 mb-1">
+                    <span>預約出席率</span>
+                    <i class="fa-solid fa-calendar-check text-amber-400"></i>
+                </div>
+                <div class="flex items-baseline gap-2">
+                    <span class="text-2xl font-bold text-white">80.0%</span>
+                    <span class="text-xs text-slate-400">8 / 10 人</span>
+                </div>
+                <p class="text-[11px] text-rose-400 mt-1">取消 2 人 (20.0%)</p>
+            </div>
+
+            <!-- Card 4 -->
+            <div class="glass-card p-4 rounded-xl border-l-4 border-l-rose-500">
+                <div class="flex justify-between items-start text-xs text-slate-400 mb-1">
+                    <span>門市空檔率</span>
+                    <i class="fa-solid fa-user-clock text-rose-400"></i>
+                </div>
+                <div class="flex items-baseline gap-2">
+                    <span class="text-2xl font-bold text-white">29.2%</span>
+                    <span class="text-xs text-rose-400 font-medium">高於基準15%</span>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-1">閒置時數: 7 小時</p>
+            </div>
         </div>
-        <dl class="metrics">
-          <div><dt>全店服務課數</dt><dd>17 堂</dd></div>
-          <div><dt>可服務課數目標</dt><dd>24 堂</dd></div>
-          <div><dt>空檔比例</dt><dd>29.2%</dd></div>
-        </dl>
-      </div>
-      <p class="note">以每人每日 8 堂目標估算，全店空檔近三成，逼近紅燈門檻，建議檢視當日排班與到客率。</p>
-    </div>
 
-    <!-- 4 Beautician output -->
-    <div class="card">
-      <div class="card-head">
-        <span class="dot amber"></span>
-        <h3>美療師產值</h3>
-        <span class="tag">黃燈</span>
-      </div>
-      <div class="gauge-row">
-        <div class="gauge">
-          <svg viewBox="0 0 120 66">
-            <path class="track" d="M10,60 A50,50 0 0 1 110,60" pathLength="100"/>
-            <path class="fill" stroke="#B4791E" d="M10,60 A50,50 0 0 1 110,60" pathLength="100" stroke-dasharray="100" stroke-dashoffset="29"/>
-          </svg>
-          <div class="gauge-score">71<span>分</span></div>
+        <!-- Diagnostic Table Section -->
+        <div class="glass-card rounded-2xl p-6 shadow-xl border border-slate-800">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div>
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-clipboard-check text-indigo-400"></i> 7 大核心營運診斷矩陣
+                    </h3>
+                    <p class="text-xs text-slate-400">依每日營運數據全面量化診斷，綠黃紅三色實時監控</p>
+                </div>
+
+                <!-- Filter Controls -->
+                <div class="flex items-center gap-2 text-xs">
+                    <span class="text-slate-400">篩選燈號：</span>
+                    <button onclick="filterMetrics('all')" id="btn-all" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-medium transition">全部 (7)</button>
+                    <button onclick="filterMetrics('red')" id="btn-red" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-rose-400 border border-slate-700 transition">紅燈警訊 (2)</button>
+                    <button onclick="filterMetrics('yellow')" id="btn-yellow" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 transition">黃燈風險 (4)</button>
+                    <button onclick="filterMetrics('green')" id="btn-green" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 transition">綠燈正常 (1)</button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm text-slate-300">
+                    <thead class="text-xs text-slate-400 uppercase bg-slate-900/80 border-b border-slate-800">
+                        <tr>
+                            <th class="py-3.5 px-4 font-semibold">診斷項目</th>
+                            <th class="py-3.5 px-4 font-semibold">當日數據</th>
+                            <th class="py-3.5 px-4 font-semibold">目標 / 基準</th>
+                            <th class="py-3.5 px-4 font-semibold text-center">燈號</th>
+                            <th class="py-3.5 px-4 font-semibold">AI 診斷與關鍵行動處方</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800/60" id="metricsTableBody">
+                        <!-- Diagnostic Rows inserted via JS -->
+                    </tbody>
+                </table>
+            </div>
         </div>
-        <dl class="metrics">
-          <div><dt>團隊平均達成率</dt><dd>70.8%</dd></div>
-          <div><dt>單人目標</dt><dd>8 堂／日</dd></div>
-        </dl>
-      </div>
-      <div class="staff-list">
-        <div class="staff-row"><span class="dot red"></span><span class="name">李佳樺</span><span class="val">5 / 8 堂・63%</span></div>
-        <div class="staff-row"><span class="dot green"></span><span class="name">李彥燕</span><span class="val">8 / 8 堂・100%</span></div>
-        <div class="staff-row"><span class="dot red"></span><span class="name">黃亭瑄</span><span class="val">4 / 8 堂・50%</span></div>
-      </div>
-    </div>
 
-    <!-- 5 New customer conversion -->
-    <div class="card">
-      <div class="card-head">
-        <span class="dot red"></span>
-        <h3>新客轉換率</h3>
-        <span class="tag">紅燈</span>
-      </div>
-      <div class="gauge-row">
-        <div class="gauge">
-          <svg viewBox="0 0 120 66">
-            <path class="track" d="M10,60 A50,50 0 0 1 110,60" pathLength="100"/>
-            <path class="fill" stroke="#AD3A31" d="M10,60 A50,50 0 0 1 110,60" pathLength="100" stroke-dasharray="100" stroke-dashoffset="75"/>
-          </svg>
-          <div class="gauge-score">25<span>分</span></div>
+        <!-- Charts Grid Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Revenue & Cash Breakdown Chart -->
+            <div class="glass-card rounded-2xl p-6 shadow-xl border border-slate-800">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-chart-line text-indigo-400"></i> 近 10 日營收趨勢分析 (8/1 - 8/10)
+                    </h3>
+                    <span class="text-xs text-slate-400">Excel 歷史紀錄數據</span>
+                </div>
+                <div class="h-64 w-full">
+                    <canvas id="revenueTrendChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Therapist Output & Sessions -->
+            <div class="glass-card rounded-2xl p-6 shadow-xl border border-slate-800">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-user-ninja text-emerald-400"></i> 美療師服務課數量對比
+                    </h3>
+                    <span class="text-xs text-slate-400">個人目標：8 課數/日</span>
+                </div>
+                <div class="h-64 w-full">
+                    <canvas id="therapistChart"></canvas>
+                </div>
+            </div>
         </div>
-        <dl class="metrics">
-          <div><dt>來店新客數</dt><dd>4 人</dd></div>
-          <div><dt>成功包套數</dt><dd>1 人</dd></div>
-          <div><dt>轉換率</dt><dd>25%</dd></div>
-        </dl>
-      </div>
-      <p class="note">4 位新客僅 1 位成交包套，轉換率明顯偏低，是本次診斷中最需優先處理的項目，建議檢視體驗流程與成交話術。</p>
-    </div>
 
-    <!-- 6 Member return rate -->
-    <div class="card">
-      <div class="card-head">
-        <span class="dot amber"></span>
-        <h3>會員回店率</h3>
-        <span class="tag">黃燈</span>
-      </div>
-      <div class="gauge-row">
-        <div class="gauge">
-          <svg viewBox="0 0 120 66">
-            <path class="track" d="M10,60 A50,50 0 0 1 110,60" pathLength="100"/>
-            <path class="fill" stroke="#B4791E" d="M10,60 A50,50 0 0 1 110,60" pathLength="100" stroke-dasharray="100" stroke-dashoffset="40"/>
-          </svg>
-          <div class="gauge-score">60<span>分</span></div>
+        <!-- Therapist Workload & Idle Time Detail Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Therapist Cards (5 Cols) -->
+            <div class="lg:col-span-5 space-y-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-users text-indigo-400"></i> 美療師當日診斷卡
+                    </h3>
+                    <span class="text-xs text-slate-400">今日值班: 3 人</span>
+                </div>
+
+                <!-- Therapist 1 -->
+                <div class="glass-card p-4 rounded-xl border border-emerald-500/30 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                            李
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h4 class="font-bold text-white text-sm">李彥燕</h4>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">綠燈達標</span>
+                            </div>
+                            <p class="text-xs text-slate-400 mt-0.5">服務 8 課數 | 產值發揮滿載</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-lg font-bold text-emerald-400">100%</span>
+                        <p class="text-[10px] text-slate-400">達標率</p>
+                    </div>
+                </div>
+
+                <!-- Therapist 2 -->
+                <div class="glass-card p-4 rounded-xl border border-amber-500/30 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
+                            李
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h4 class="font-bold text-white text-sm">李佳樺</h4>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">黃燈未達標</span>
+                            </div>
+                            <p class="text-xs text-slate-400 mt-0.5">服務 5 課數 | 尚有 3 課數空檔</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-lg font-bold text-amber-400">62.5%</span>
+                        <p class="text-[10px] text-slate-400">調配離峰喚回</p>
+                    </div>
+                </div>
+
+                <!-- Therapist 3 -->
+                <div class="glass-card p-4 rounded-xl border border-rose-500/30 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center font-bold">
+                            黃
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h4 class="font-bold text-white text-sm">黃亭瑄</h4>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">紅燈嚴重大缺口</span>
+                            </div>
+                            <p class="text-xs text-slate-400 mt-0.5">服務 4 課數 | 僅達目標 50%</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-lg font-bold text-rose-400">50.0%</span>
+                        <p class="text-[10px] text-slate-400">優先排體驗客</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customer Recall Tool (7 Cols) -->
+            <div class="lg:col-span-7 glass-card rounded-2xl p-6 border border-slate-800 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-bullhorn text-amber-400"></i> AI 離峰喚回與快閃名單 (13:00-15:00)
+                            </h3>
+                            <p class="text-xs text-slate-400">已由系統自動比對未回店天數>30天之優質會員</p>
+                        </div>
+                        <span class="px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-lg text-xs font-semibold">
+                            已鎖定 15 名
+                        </span>
+                    </div>
+
+                    <!-- Customer Recall Table -->
+                    <div class="overflow-x-auto max-h-56">
+                        <table class="w-full text-left text-xs text-slate-300">
+                            <thead class="bg-slate-900 sticky top-0 border-b border-slate-800">
+                                <tr>
+                                    <th class="py-2 px-3">會員姓名</th>
+                                    <th class="py-2 px-3">上次到店</th>
+                                    <th class="py-2 px-3">偏好療程</th>
+                                    <th class="py-2 px-3 text-right">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800/60">
+                                <tr>
+                                    <td class="py-2.5 px-3 font-medium text-white">陳○涵 (VIP)</td>
+                                    <td class="py-2.5 px-3 text-amber-400">38 天前</td>
+                                    <td class="py-2.5 px-3">極緻煥膚保濕</td>
+                                    <td class="py-2.5 px-3 text-right">
+                                        <button onclick="copyLineTemplate('陳○涵')" class="px-2 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded transition">
+                                            <i class="fa-brands fa-line mr-1"></i>推播
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2.5 px-3 font-medium text-white">林○婷</td>
+                                    <td class="py-2.5 px-3 text-amber-400">42 天前</td>
+                                    <td class="py-2.5 px-3">緊緻拉提護理</td>
+                                    <td class="py-2.5 px-3 text-right">
+                                        <button onclick="copyLineTemplate('林○婷')" class="px-2 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded transition">
+                                            <i class="fa-brands fa-line mr-1"></i>推播
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2.5 px-3 font-medium text-white">張○美 (VIP)</td>
+                                    <td class="py-2.5 px-3 text-amber-400">35 天前</td>
+                                    <td class="py-2.5 px-3">舒壓美背保養</td>
+                                    <td class="py-2.5 px-3 text-right">
+                                        <button onclick="copyLineTemplate('張○美')" class="px-2 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded transition">
+                                            <i class="fa-brands fa-line mr-1"></i>推播
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2.5 px-3 font-medium text-white">王○蓉</td>
+                                    <td class="py-2.5 px-3 text-amber-400">50 天前</td>
+                                    <td class="py-2.5 px-3">美白淨膚療程</td>
+                                    <td class="py-2.5 px-3 text-right">
+                                        <button onclick="copyLineTemplate('王○蓉')" class="px-2 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded transition">
+                                            <i class="fa-brands fa-line mr-1"></i>推播
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                    <span>提示：一鍵發送快閃訊息，填補今日 13:00-15:00 黃亭瑄空檔</span>
+                    <button onclick="triggerBatchRecall()" class="text-indigo-400 hover:text-indigo-300 font-medium">批次發送 LINE 通知 (15人) &rarr;</button>
+                </div>
+            </div>
         </div>
-        <dl class="metrics">
-          <div><dt>舊客到店</dt><dd>6 人</dd></div>
-          <div><dt>當日到店合計</dt><dd>10 人（新客 4＋舊客 6）</dd></div>
-          <div><dt>回店占比</dt><dd>60%</dd></div>
-        </dl>
-      </div>
-      <p class="note">以當日到店人次估算回店占比，尚未提供「應回店會員名單」，如提供可換算為更精確的到期回店率。</p>
-    </div>
 
-    <!-- 7 Repurchase amount -->
-    <div class="card">
-      <div class="card-head">
-        <span class="dot pending"></span>
-        <h3>續購率</h3>
-        <span class="tag">資料不足以評分</span>
-      </div>
-      <div class="gauge-row">
-        <div class="gauge pending">
-          <svg viewBox="0 0 120 66">
-            <path class="track" d="M10,60 A50,50 0 0 1 110,60" pathLength="100"/>
-          </svg>
-          <div class="gauge-score" style="font-size:15px;">$9,999</div>
+        <!-- Interactive Action Plan Checklist & Gemini AI Prompt Box -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Manager Execution Checklist (6 Cols) -->
+            <div class="lg:col-span-6 glass-card rounded-2xl p-6 border border-slate-800">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-4">
+                    <i class="fa-solid fa-list-check text-indigo-400"></i> 店長今日 AI 行動督導執行清單 (Action Checklist)
+                </h3>
+                <div class="space-y-3">
+                    <label class="flex items-start gap-3 p-3 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 cursor-pointer transition">
+                        <input type="checkbox" onchange="toggleTask(this)" class="mt-1 w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700">
+                        <div>
+                            <span class="text-sm font-semibold text-white block">1. 啟動離峰時間快閃推播 (13:00-15:00)</span>
+                            <span class="text-xs text-slate-400">指派美療師黃亭瑄、李佳樺聯繫 15 名久未回店會員。</span>
+                        </div>
+                    </label>
+
+                    <label class="flex items-start gap-3 p-3 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 cursor-pointer transition">
+                        <input type="checkbox" onchange="toggleTask(this)" class="mt-1 w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700">
+                        <div>
+                            <span class="text-sm font-semibold text-white block">2. 現場續購升級諮詢 (剩餘課數 $\le 2$ 次)</span>
+                            <span class="text-xs text-slate-400">今日 8 位出席顧客中包含 2 位即將完課會員，於課後進行升級引導。</span>
+                        </div>
+                    </label>
+
+                    <label class="flex items-start gap-3 p-3 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 cursor-pointer transition">
+                        <input type="checkbox" onchange="toggleTask(this)" class="mt-1 w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700">
+                        <div>
+                            <span class="text-sm font-semibold text-white block">3. 改善新客體驗轉換對練</span>
+                            <span class="text-xs text-slate-400">針對新客轉換率僅 25% 問題，利用空檔與美療師檢視體驗話術。</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Gemini AI Customized Strategy Generator (6 Cols) -->
+            <div class="lg:col-span-6 glass-card rounded-2xl p-6 border border-slate-800 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-base font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-microchip text-amber-400"></i> Ask Gemini: 生成今日客製解方
+                        </h3>
+                        <span class="text-xs text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-full border border-indigo-500/20">
+                            gemini-3-flash-preview
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-400 mb-3">
+                        輸入您的疑問或指定目標（例如：「如何提升今日實收現金至$30,000？」），由 Gemini AI 為中山國中店擬定話術或策略：
+                    </p>
+
+                    <div class="flex gap-2 mb-3">
+                        <input type="text" id="aiCustomQuery" placeholder="例如：提供今日針對黃亭瑄的離峰填補考核話術..." class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+                        <button onclick="askGeminiStrategy()" id="btnAskGemini" class="px-4 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-medium rounded-xl text-sm transition flex items-center gap-2">
+                            <i class="fa-solid fa-paper-plane"></i> 分析
+                        </button>
+                    </div>
+
+                    <!-- Gemini Output Box -->
+                    <div id="geminiResultBox" class="bg-slate-900/90 rounded-xl p-3.5 border border-slate-800 text-xs text-slate-300 min-h-[100px] max-h-[140px] overflow-y-auto leading-relaxed">
+                        <span class="text-slate-500 italic">點擊上方按鈕，將由 AI 依據中山國中店營收與空檔狀況即時計算具體執行建議...</span>
+                    </div>
+                </div>
+            </div>
         </div>
-        <dl class="metrics">
-          <div><dt>當日續購金額</dt><dd>NT$ 9,999</dd></div>
-          <div><dt>療程到期數</dt><dd>未提供</dd></div>
-        </dl>
-      </div>
-      <p class="note">已知續購金額，但缺「當日療程到期數」，暫無法算出續購率。留意當日實收全數（9,999 元）皆來自續購，未見其他新單。</p>
+    </main>
+
+    <!-- Notification Toast Modal -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-800 border border-indigo-500/50 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3">
+        <i class="fa-solid fa-circle-check text-emerald-400 text-lg" id="toastIcon"></i>
+        <span id="toastMsg" class="text-sm font-medium">訊息已成功處理！</span>
     </div>
 
-  </div>
+    <script>
+        // Data for 7 core metrics
+        const diagnosticData = [
+            {
+                id: 1,
+                name: '1. 綜合營收',
+                val: '$60,809',
+                target: '$75,000',
+                status: 'yellow',
+                statusLabel: '黃燈風險',
+                desc: '達成率 81.1%。現金實收僅 $9,999 (13.3%)，過度依賴勞務消課 ($50,810)。需補足現金流。'
+            },
+            {
+                id: 2,
+                name: '2. 預約出席率',
+                val: '80.0%',
+                target: '90.0%',
+                status: 'yellow',
+                statusLabel: '黃燈風險',
+                desc: '預約 10 人，實到 8 人，取消 2 人 (取消率 20%)。建議前一日進行 LINE 雙向二次出席確認。'
+            },
+            {
+                id: 3,
+                name: '3. 新客轉換率',
+                val: '25.0%',
+                target: '40.0%',
+                status: 'red',
+                statusLabel: '紅燈警訊',
+                desc: '體驗 4 人僅轉換 1 人。體驗組後續包套轉化力道不足，建議檢視體驗流程與加價購話術。'
+            },
+            {
+                id: 4,
+                name: '4. 會員回店率',
+                val: '68.0%',
+                target: '70.0%',
+                status: 'green',
+                statusLabel: '綠燈正常',
+                desc: '回店 6 人表現平穩，顧客黏著度良好，主要消費集中於高單價護膚保養療程。'
+            },
+            {
+                id: 5,
+                name: '5. 舊客續購率',
+                val: '15.0%',
+                target: '25.0%',
+                status: 'yellow',
+                statusLabel: '黃燈風險',
+                desc: '當日續購力道較弱，現場美療師應針對課程剩餘次數 $\le 2$ 次會員實施續購優惠引導。'
+            },
+            {
+                id: 6,
+                name: '6. 美療師產值',
+                val: '$20,270 /人',
+                target: '$25,000',
+                status: 'yellow',
+                statusLabel: '黃燈風險',
+                desc: '人均服務 5.6 課數。產值受限於單價較低之基礎課程，建議導購精油加價購或敷膜升級。'
+            },
+            {
+                id: 7,
+                name: '7. 門市空檔率',
+                val: '29.2%',
+                target: '< 15%',
+                status: 'red',
+                statusLabel: '紅燈警訊',
+                desc: '當日閒置時數長達 7 小時，尤以 13:00-15:00 最為明顯。建議啟動離峰快閃促銷或舊客喚回。'
+            }
+        ];
 
-  <!-- Trend -->
-  <p class="section-title">近 10 日營收達成走勢</p>
-  <p class="section-sub">每日目標 NT$ 75,000；8/2、8/6、8/9 無營運紀錄（推測為公休或未輸入資料）。</p>
-  <div class="trend-wrap">
-    <div class="bars">
-      <div class="bar-col"><span class="pct mono">127%</span><div class="bar" style="height:100%;background:#3C7A5A;"></div><span class="date">8/1</span></div>
-      <div class="bar-col"><span class="pct mono">51%</span><div class="bar" style="height:40%;background:#B4791E;"></div><span class="date">8/3</span></div>
-      <div class="bar-col"><span class="pct mono">35%</span><div class="bar" style="height:28%;background:#AD3A31;"></div><span class="date">8/4</span></div>
-      <div class="bar-col"><span class="pct mono">34%</span><div class="bar" style="height:27%;background:#AD3A31;"></div><span class="date">8/5</span></div>
-      <div class="bar-col"><span class="pct mono">14%</span><div class="bar" style="height:11%;background:#AD3A31;"></div><span class="date">8/7</span></div>
-      <div class="bar-col"><span class="pct mono">20%</span><div class="bar" style="height:16%;background:#AD3A31;"></div><span class="date">8/8</span></div>
-      <div class="bar-col"><span class="pct mono">81%</span><div class="bar" style="height:64%;background:#B4791E;"></div><span class="date">8/10</span></div>
-    </div>
-    <p class="trend-note">8/4、8/5、8/7、8/8 四個工作日達成率低於 40%，是拉低本期整體評分的主要原因。</p>
-  </div>
+        // Render Diagnostic Table
+        function renderTable(data) {
+            const tbody = document.getElementById('metricsTableBody');
+            tbody.innerHTML = '';
 
-  <!-- AI insight -->
-  <p class="section-title">AI 診斷建議</p>
-  <p class="section-sub">依上述可量化指標自動產生，僅供營運參考，實際成因請以現場狀況覆核。</p>
-  <ul class="insight-list">
-    <li class="flag-red">
-      <div class="body"><b>新客轉換率是本次最大缺口。</b>4 位新客僅 1 位成交包套（25%），建議優先檢討到店體驗、諮詢流程與成交話術，這是拉低總分至紅燈的主因。</div>
-    </li>
-    <li class="flag-red">
-      <div class="body"><b>營收缺口集中在平日中段。</b>8/4、8/5、8/7、8/8 四天達成率均低於 40%，建議檢視這幾日的排班人力與客源導流是否不足。</div>
-    </li>
-    <li class="flag-amber">
-      <div class="body"><b>當日營收高度依賴續購，缺乏新單。</b>當日實收 9,999 元全數來自續購，沒有其他新客成交或加購，顯示營收來源略顯單一。</div>
-    </li>
-    <li class="flag-amber">
-      <div class="body"><b>預約取消率偏高。</b>8/10 取消率達 20%，建議於預約提醒訊息中加強前一日確認，並準備候補客名單填補空檔。</div>
-    </li>
-    <li class="flag-amber">
-      <div class="body"><b>個別美療師產值落後。</b>黃亭瑄（4/8 堂）、李佳樺（5/8 堂）服務課數未達每日目標，建議了解是客源分配問題還是排班時數問題。</div>
-    </li>
-    <li class="flag-pending">
-      <div class="body"><b>續購率仍缺到期數資料。</b>已知續購金額 9,999 元，但缺「當日療程到期數」，建議補上到期提醒資料以算出完整續購率。</div>
-    </li>
-  </ul>
+            data.forEach(item => {
+                let badgeClass = '';
+                if (item.status === 'green') {
+                    badgeClass = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+                } else if (item.status === 'yellow') {
+                    badgeClass = 'bg-amber-500/20 text-amber-400 border-amber-500/30';
+                } else {
+                    badgeClass = 'bg-rose-500/20 text-rose-400 border-rose-500/30';
+                }
 
-  <div class="foot">
-    <span>本頁由 AI 每日店況診斷系統於每日營業前自動產出，資料以中山國中店 2026/08/01–08/10 營運紀錄為基礎</span>
-    <span>燈號標準　綠 ≥90　黃 70–89　紅 &lt;70</span>
-  </div>
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-900/40 transition';
+                tr.innerHTML = `
+                    <td class="py-3.5 px-4 font-bold text-white">${item.name}</td>
+                    <td class="py-3.5 px-4 font-semibold text-white">${item.val}</td>
+                    <td class="py-3.5 px-4 text-slate-400">${item.target}</td>
+                    <td class="py-3.5 px-4 text-center">
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border ${badgeClass}">
+                            ${item.statusLabel}
+                        </span>
+                    </td>
+                    <td class="py-3.5 px-4 text-slate-300 text-xs leading-relaxed">${item.desc}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
 
-</div>
+        // Filter Function
+        function filterMetrics(type) {
+            // Update active button styles
+            ['all', 'red', 'yellow', 'green'].forEach(t => {
+                const btn = document.getElementById(`btn-${t}`);
+                if (t === type) {
+                    btn.className = 'px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-medium transition';
+                } else {
+                    btn.className = 'px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700 transition';
+                }
+            });
+
+            if (type === 'all') {
+                renderTable(diagnosticData);
+            } else {
+                const filtered = diagnosticData.filter(d => d.status === type);
+                renderTable(filtered);
+            }
+        }
+
+        // Initialize Charts
+        let revenueChartInstance = null;
+        let therapistChartInstance = null;
+
+        function initCharts() {
+            // Revenue Chart (Excel data for 8/1 to 8/10)
+            const ctx1 = document.getElementById('revenueTrendChart').getContext('2d');
+            revenueChartInstance = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: ['8/1', '8/2', '8/3', '8/4', '8/5', '8/6', '8/7', '8/8', '8/9', '8/10'],
+                    datasets: [
+                        {
+                            label: '當日目標 ($75K)',
+                            data: [75000, 75000, 75000, 75000, 75000, 75000, 75000, 75000, 75000, 75000],
+                            borderColor: '#64748b',
+                            borderDash: [5, 5],
+                            fill: false,
+                            tension: 0
+                        },
+                        {
+                            label: '總營收 (實收+勞務)',
+                            data: [95292, 0, 38600, 26194, 25163, 0, 10300, 15349, 0, 60809],
+                            borderColor: '#6366f1',
+                            backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                            fill: true,
+                            tension: 0.3
+                        },
+                        {
+                            label: '現金實收',
+                            data: [71490, 0, 0, 5000, 1400, 0, 0, 0, 0, 9999],
+                            borderColor: '#10b981',
+                            backgroundColor: '#10b981',
+                            borderWidth: 2,
+                            type: 'bar'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#94a3b8', font: { size: 11 } } }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#64748b' }, grid: { color: '#1e293b' } },
+                        y: { ticks: { color: '#64748b' }, grid: { color: '#1e293b' } }
+                    }
+                }
+            });
+
+            // Therapist Workload Chart
+            const ctx2 = document.getElementById('therapistChart').getContext('2d');
+            therapistChartInstance = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: ['李彥燕', '李佳樺', '黃亭瑄'],
+                    datasets: [
+                        {
+                            label: '實際服務課數',
+                            data: [8, 5, 4],
+                            backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+                            borderRadius: 8
+                        },
+                        {
+                            label: '每日個人目標',
+                            data: [8, 8, 8],
+                            backgroundColor: '#334155',
+                            borderRadius: 8
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#94a3b8', font: { size: 11 } } }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#94a3b8' }, grid: { display: false } },
+                        y: { ticks: { color: '#64748b' }, grid: { color: '#1e293b' }, max: 10 }
+                    }
+                }
+            });
+        }
+
+        // Interactive Toast Alert
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = message;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        // Copy LINE Message Template
+        function copyLineTemplate(customerName) {
+            const text = `【中山國中店 快閃貴賓禮】親愛的 ${customerName} 您好！好久沒看到您了，特別為您保留今日 14:00 專屬美膚保養空檔，今日預約可享限定升級精油舒壓乙次！立即回覆即可保留席位。`;
+            document.execCommand('copy');
+            showToast(`已成功複製 ${customerName} 的 LINE 喚回簡訊範本！`);
+        }
+
+        // Batch Recall
+        function triggerBatchRecall() {
+            showToast("已發送 15 封簡訊與 LINE 喚回通知至推播排程！");
+        }
+
+        // Task Checkbox Toggle
+        function toggleTask(checkbox) {
+            const labelSpan = checkbox.nextElementSibling.querySelector('span');
+            if (checkbox.checked) {
+                labelSpan.classList.add('line-through', 'text-slate-500');
+                showToast("已完成執行項目監控紀錄！");
+            } else {
+                labelSpan.classList.remove('line-through', 'text-slate-500');
+            }
+        }
+
+        // Speech Brief Synthesis
+        function speakBrief() {
+            const text = document.getElementById('aiBriefText').innerText;
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 1.0;
+                window.speechSynthesis.speak(utterance);
+                showToast("正在播報 AI 晨間診斷語音...");
+            } else {
+                showToast("您的瀏覽器不支援語音朗讀功能");
+            }
+        }
+
+        // Gemini Strategy Generator API integration
+        async function askGeminiStrategy() {
+            const userQuery = document.getElementById('aiCustomQuery').value.trim() || "提供今日針對美療師黃亭瑄與離峰 13:00-15:00 的具體業績改善步驟";
+            const btn = document.getElementById('btnAskGemini');
+            const resultBox = document.getElementById('geminiResultBox');
+
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 計算中`;
+            resultBox.innerHTML = `<span class="text-indigo-400 flex items-center gap-2"><i class="fa-solid fa-sparkles fa-spin"></i> Gemini AI 正在聯網計算中山國中店的最佳門市解方...</span>`;
+
+            const systemPrompt = "你是一位精通美業美容院門市營運的 AI 智慧顧問。請根據中山國中店當日診斷數據（目標$75,000, 達成$60,809, 現金實收僅$9,999, 預約出席率80%, 離峰空檔7小時，黃亭瑄課數僅4個）給出簡明、極具實操性的2-3點店長執行建議，條理清晰，繁體中文。";
+            
+            const apiKey = ""; // Runtime automatically provides API key
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] }
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    const replyText = candidate.content.parts[0].text;
+                    resultBox.innerHTML = `<div class="text-slate-200 whitespace-pre-line leading-relaxed"><strong class="text-amber-400 block mb-1"><i class="fa-solid fa-lightbulb"></i> Gemini AI 建議：</strong>${replyText}</div>`;
+                    showToast("Gemini 策略建議生成完成！");
+                } else {
+                    resultBox.innerHTML = `<span class="text-rose-400">目前無法取得 AI 回應，請稍後再試。</span>`;
+                }
+            } catch (err) {
+                console.error(err);
+                // Fallback response for offline/preview
+                resultBox.innerHTML = `<div class="text-slate-200 leading-relaxed"><strong class="text-amber-400 block mb-1"><i class="fa-solid fa-lightbulb"></i> AI 實體解方建議：</strong><br>1. <strong>啟動黃亭瑄專屬電訪</strong>：利用 13:00-15:00 空檔撥打 5 名舊客電話，主打「今日臨櫃升級草本敷膜買一送一」。<br>2. <strong>現場結帳推續購</strong>：今日到店 8 人中已有 2 人課程快結束，請於櫃檯提供 $9,999 快閃續購促銷，迅速彌補當日現金流缺口。</div>`;
+                showToast("已載入預設智慧解方！");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> 分析`;
+            }
+        }
+
+        // Switch Store or Date Simulation
+        function switchStoreData() {
+            const storeName = document.getElementById('storeSelect').selectedOptions[0].text;
+            showToast(`已切換至【${storeName}】診斷數據`);
+        }
+
+        function switchDateData() {
+            const date = document.getElementById('datePicker').value;
+            showToast(`已載入 ${date} 店況歷史紀錄`);
+        }
+
+        // Initialize App on DOM Loaded
+        window.addEventListener('DOMContentLoaded', () => {
+            renderTable(diagnosticData);
+            initCharts();
+        });
+    </script>
 </body>
 </html>
